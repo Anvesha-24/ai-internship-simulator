@@ -25,9 +25,12 @@ app.use(express.json());
 app.use(cors({
   origin: [
     "http://localhost:5173", 
-    "https://ai-internship-simulator.vercel.app" // Add your actual Vercel domain here
+    "https://ai-internship-simulator-nm7wiazcc.vercel.app",
+    "https://ai-internship-simulator.vercel.app" // Add your main domain too!
   ],
-  credentials: true
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
 // Environment Variable Debug (Confirming keys are ready for Gemini/MongoDB)
