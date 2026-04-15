@@ -13,33 +13,31 @@ import assignmentRoutes from "./routes/assignmentRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import certificateRoutes from "./routes/certificateRoutes.js";
 
-// Initialize Database
-connectDB();
-
+// Initialize Express
 const app = express();
 
-// Middleware
-app.use(express.json());
-
-// Optimized CORS for Production
+// 1. UNIVERSAL CORS (Must be at the top)
+// Using origin: true ensures it matches whatever Vercel URL is calling it
 app.use(cors({
-  origin: [
-    "http://localhost:5173", 
-    "https://ai-internship-simulator-nm7wiazcc.vercel.app",
-    "https://ai-internship-simulator.vercel.app" // Add your main domain too!
-  ],
+  origin: true, 
   credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE"],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-// Environment Variable Debug (Confirming keys are ready for Gemini/MongoDB)
+// 2. JSON PARSER
+app.use(express.json());
+
+// 3. INITIALIZE DATABASE
+connectDB();
+
+// 4. ENVIRONMENT DEBUG LOGS
 console.log("--- Production Check ---");
 console.log("Gemini API Key Loaded:", process.env.GEMINI_API_KEY ? "YES" : "NO");
 console.log("Mongo URI Available:", process.env.MONGO_URI ? "YES" : "NO");
 console.log("------------------------");
 
-// API Routes
+// 5. API ROUTES
 app.use("/api/auth", authRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/submissions", submissionRoutes);
@@ -47,9 +45,12 @@ app.use("/api/assignments", assignmentRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/certificate", certificateRoutes);
 
-// Health check for Render
-app.get("/", (req, res) => res.send("AI Internship Simulator API is running..."));
+// 6. HEALTH CHECK / ROOT ROUTE
+app.get("/", (req, res) => {
+  res.send("AI Internship Simulator API is running...");
+});
 
+// 7. SERVER STARTUP
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
