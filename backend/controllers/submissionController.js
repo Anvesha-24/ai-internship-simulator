@@ -3,19 +3,22 @@ import Task from "../models/Task.js";
 import User from "../models/User.js";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
+import Groq from "groq-sdk";
 
 dotenv.config();
 
 // ==============================
-// 🔑 GEMINI CONFIG (REST API)
+// 🔑 GROQ CONFIG
 // ==============================
-const API_KEY = process.env.GEMINI_API_KEY?.trim();
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY?.trim(),
+});
 
-if (!API_KEY) {
-  console.error("❌ GEMINI API KEY MISSING");
+if (!process.env.GROQ_API_KEY) {
+  console.error("❌ GROQ API KEY MISSING");
 }
 
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
+// ==============================
 // 📦 FETCH GITHUB README
 // ==============================
 const getReadme = async (githubLink) => {
@@ -76,7 +79,7 @@ export const createSubmission = async (req, res) => {
     }
 
     // ==============================
-    // 🧠 GEMINI AI EVALUATION (REST)
+    // 🧠 GROQ AI EVALUATION
     // ==============================
     let score = 5;
     let aiFeedback = "Default feedback";
@@ -93,7 +96,7 @@ ${textAnswer || "N/A"}
 GITHUB README CONTENT:
 ${repoContent.substring(0, 2000)}
 
-Return ONLY valid JSON:
+Return ONLY valid JSON (no markdown, no explanation, no backticks):
 {
   "score": number (0-10),
   "feedback": "short constructive feedback"
@@ -101,29 +104,24 @@ Return ONLY valid JSON:
 `;
 
     try {
-      const aiResponse = await fetch(GEMINI_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: prompt }],
-            },
-          ],
-        }),
+      const aiResponse = await groq.chat.completions.create({
+        model: "llama-3.1-8b-instant",
+        max_tokens: 512,
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a strict but fair technical evaluator. Always respond with valid JSON only. No markdown, no backticks, no extra text.",
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
       });
 
-      const data = await aiResponse.json();
-
-      if (!aiResponse.ok) {
-        console.error("GEMINI API ERROR:", data);
-        throw new Error("Gemini API failed");
-      }
-
       const responseText =
-        data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        aiResponse.choices?.[0]?.message?.content || "";
 
       // ✅ SAFE JSON PARSE
       let parsed = null;
@@ -138,9 +136,9 @@ Return ONLY valid JSON:
         aiFeedback = parsed.feedback ?? aiFeedback;
       }
     } catch (aiErr) {
-      console.error("----- GEMINI ERROR FULL -----");
+      console.error("----- GROQ ERROR -----");
       console.error(aiErr.message);
-      console.error("-----------------------------");
+      console.error("----------------------");
 
       score = githubLink ? 6 : 4;
       aiFeedback = "AI evaluation failed. Needs manual review.";
