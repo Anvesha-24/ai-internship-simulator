@@ -57,3 +57,6 @@ coverage/
 # ==============================
 *.pem
 .cache/
+
+# Force Vercel to generate its own Linux dependencies
+package-lock.json
